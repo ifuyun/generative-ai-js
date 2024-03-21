@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2023 Google LLC
+ * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,9 @@
 import { RequestOptions } from "../../types";
 import { GoogleGenerativeAIError } from "../errors";
 
-const API_VERSION = "v1";
+const BASE_URL = "https://generativelanguage.googleapis.com";
+
+export const DEFAULT_API_VERSION = "v1";
 
 /**
  * We can't `require` package.json if this runs on web. We will use rollup to
@@ -44,10 +46,9 @@ export class RequestUrl {
     public requestOptions: RequestOptions,
   ) {}
   toString(): string {
-    const baseURL =
-      this.requestOptions?.baseURL ||
-      "https://generativelanguage.googleapis.com";
-    let url = `${baseURL}/${API_VERSION}/${this.model}:${this.task}`;
+    const baseURL = this.requestOptions?.baseURL || BASE_URL;
+    const apiVersion = this.requestOptions?.apiVersion || DEFAULT_API_VERSION;
+    let url = `${baseURL}/${apiVersion}/${this.model}:${this.task}`;
     if (this.stream) {
       url += "?alt=sse";
     }

@@ -16,6 +16,7 @@ export interface RequestOptions
 
 |  Property | Modifiers | Type | Description |
 |  --- | --- | --- | --- |
+|  [apiVersion?](./generative-ai.requestoptions.apiversion.md) |  | string | _(Optional)_ Version of API endpoint to call (e.g. "v1" or "v1beta"). If not specified, defaults to latest stable version. |
 |  [baseURL?](./generative-ai.requestoptions.baseurl.md) |  | string | _(Optional)_ |
-|  [timeout?](./generative-ai.requestoptions.timeout.md) |  | number | _(Optional)_ |
+|  [timeout?](./generative-ai.requestoptions.timeout.md) |  | number | _(Optional)_ Request timeout in milliseconds. |
 

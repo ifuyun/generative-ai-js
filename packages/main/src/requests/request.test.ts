@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2023 Google LLC
+ * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ import { expect, use } from "chai";
 import { restore, stub } from "sinon";
 import * as sinonChai from "sinon-chai";
 import * as chaiAsPromised from "chai-as-promised";
-import { RequestUrl, Task, makeRequest } from "./request";
+import { DEFAULT_API_VERSION, RequestUrl, Task, makeRequest } from "./request";
 
 use(sinonChai);
 use(chaiAsPromised);
@@ -60,6 +60,26 @@ describe("request methods", () => {
       expect(url.toString()).to.include("models/model-name:generateContent");
       expect(url.toString()).to.not.include("key");
       expect(url.toString()).to.not.include("alt=sse");
+    });
+    it("default apiVersion", async () => {
+      const url = new RequestUrl(
+        "models/model-name",
+        Task.GENERATE_CONTENT,
+        "key",
+        false,
+        {},
+      );
+      expect(url.toString()).to.include(DEFAULT_API_VERSION);
+    });
+    it("custom apiVersion", async () => {
+      const url = new RequestUrl(
+        "models/model-name",
+        Task.GENERATE_CONTENT,
+        "key",
+        false,
+        { apiVersion: "v2beta" },
+      );
+      expect(url.toString()).to.include("/v2beta/models/model-name");
     });
     it("non-stream - tunedModels/", async () => {
       const url = new RequestUrl(
