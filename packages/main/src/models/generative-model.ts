@@ -159,7 +159,14 @@ export class GenerativeModel {
    * Gets a new {@link ChatSession} instance which can be used for
    * multi-turn chats.
    */
-  startChat(startChatParams?: StartChatParams): ChatSession {
+  startChat(
+    startChatParams?: StartChatParams,
+    requestOptions: SingleRequestOptions = {},
+  ): ChatSession {
+    const generativeModelRequestOptions: SingleRequestOptions = {
+      ...this._requestOptions,
+      ...requestOptions,
+    };
     return new ChatSession(
       this.apiKey,
       this.model,
@@ -172,7 +179,7 @@ export class GenerativeModel {
         cachedContent: this.cachedContent?.name,
         ...startChatParams,
       },
-      this.requestOptions,
+      generativeModelRequestOptions,
     );
   }
 
