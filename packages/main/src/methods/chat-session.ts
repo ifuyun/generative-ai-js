@@ -22,6 +22,7 @@ import {
   GenerateContentStreamResult,
   Part,
   RequestOptions,
+  SingleRequestOptions,
   StartChatParams,
 } from "../../types";
 import { formatNewContent } from "../requests/request-helpers";
@@ -49,7 +50,7 @@ export class ChatSession {
     apiKey: string,
     public model: string,
     public params?: StartChatParams,
-    public requestOptions?: RequestOptions,
+    private _requestOptions: RequestOptions = {},
   ) {
     this._apiKey = apiKey;
     if (params?.history) {
@@ -70,10 +71,15 @@ export class ChatSession {
 
   /**
    * Sends a chat message and receives a non-streaming
-   * {@link GenerateContentResult}
+   * {@link GenerateContentResult}.
+   *
+   * Fields set in the optional {@link SingleRequestOptions} parameter will
+   * take precedence over the {@link RequestOptions} values provided at the
+   * time of the {@link GoogleAIFileManager} initialization.
    */
   async sendMessage(
     request: string | Array<string | Part>,
+    requestOptions: SingleRequestOptions = {},
   ): Promise<GenerateContentResult> {
     await this._sendPromise;
     const newContent = formatNewContent(request);
@@ -81,7 +87,14 @@ export class ChatSession {
       safetySettings: this.params?.safetySettings,
       generationConfig: this.params?.generationConfig,
       tools: this.params?.tools,
+      toolConfig: this.params?.toolConfig,
+      systemInstruction: this.params?.systemInstruction,
+      cachedContent: this.params?.cachedContent,
       contents: [...this._history, newContent],
+    };
+    const chatSessionRequestOptions: SingleRequestOptions = {
+      ...this._requestOptions,
+      ...requestOptions,
     };
     let finalResult;
     // Add onto the chain.
@@ -91,7 +104,7 @@ export class ChatSession {
           this._apiKey,
           this.model,
           generateContentRequest,
-          this.requestOptions,
+          chatSessionRequestOptions,
         ),
       )
       .then((result) => {
@@ -125,9 +138,14 @@ export class ChatSession {
    * Sends a chat message and receives the response as a
    * {@link GenerateContentStreamResult} containing an iterable stream
    * and a response promise.
+   *
+   * Fields set in the optional {@link SingleRequestOptions} parameter will
+   * take precedence over the {@link RequestOptions} values provided at the
+   * time of the {@link GoogleAIFileManager} initialization.
    */
   async sendMessageStream(
     request: string | Array<string | Part>,
+    requestOptions: SingleRequestOptions = {},
   ): Promise<GenerateContentStreamResult> {
     await this._sendPromise;
     const newContent = formatNewContent(request);
@@ -135,13 +153,20 @@ export class ChatSession {
       safetySettings: this.params?.safetySettings,
       generationConfig: this.params?.generationConfig,
       tools: this.params?.tools,
+      toolConfig: this.params?.toolConfig,
+      systemInstruction: this.params?.systemInstruction,
+      cachedContent: this.params?.cachedContent,
       contents: [...this._history, newContent],
+    };
+    const chatSessionRequestOptions: SingleRequestOptions = {
+      ...this._requestOptions,
+      ...requestOptions,
     };
     const streamPromise = generateContentStream(
       this._apiKey,
       this.model,
       generateContentRequest,
-      this.requestOptions,
+      chatSessionRequestOptions,
     );
 
     // Add onto the chain.

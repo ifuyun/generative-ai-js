@@ -1,6 +1,6 @@
 /**
  * @license
- * Copyright 2023 Google LLC
+ * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,6 @@ export async function getGenerativeModel(params) {
 
   const genAI = new GoogleGenerativeAI(API_KEY);
 
-  // For text-only inputs, use the gemini-pro model
   return genAI.getGenerativeModel(params);
 }
 

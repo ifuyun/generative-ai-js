@@ -15,12 +15,16 @@
  * limitations under the License.
  */
 
-import { RequestOptions } from "../../types";
-import { GoogleGenerativeAIError } from "../errors";
+import { RequestOptions, SingleRequestOptions } from "../../types";
+import {
+  GoogleGenerativeAIError,
+  GoogleGenerativeAIFetchError,
+  GoogleGenerativeAIRequestInputError,
+} from "../errors";
 
-const BASE_URL = "https://generativelanguage.googleapis.com";
+export const DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com";
 
-export const DEFAULT_API_VERSION = "v1";
+export const DEFAULT_API_VERSION = "v1beta";
 
 /**
  * We can't `require` package.json if this runs on web. We will use rollup to
@@ -46,9 +50,9 @@ export class RequestUrl {
     public requestOptions: RequestOptions,
   ) {}
   toString(): string {
-    const baseURL = this.requestOptions?.baseURL || BASE_URL;
     const apiVersion = this.requestOptions?.apiVersion || DEFAULT_API_VERSION;
-    let url = `${baseURL}/${apiVersion}/${this.model}:${this.task}`;
+    const baseUrl = this.requestOptions?.baseUrl || DEFAULT_BASE_URL;
+    let url = `${baseUrl}/${apiVersion}/${this.model}:${this.task}`;
     if (this.stream) {
       url += "?alt=sse";
     }
@@ -59,48 +63,153 @@ export class RequestUrl {
 /**
  * Simple, but may become more complex if we add more versions to log.
  */
-function getClientHeaders(): string {
-  return `${PACKAGE_LOG_HEADER}/${PACKAGE_VERSION}`;
+export function getClientHeaders(requestOptions: RequestOptions): string {
+  const clientHeaders = [];
+  if (requestOptions?.apiClient) {
+    clientHeaders.push(requestOptions.apiClient);
+  }
+  clientHeaders.push(`${PACKAGE_LOG_HEADER}/${PACKAGE_VERSION}`);
+  return clientHeaders.join(" ");
+}
+
+export async function getHeaders(url: RequestUrl): Promise<Headers> {
+  const headers = new Headers();
+  headers.append("Content-Type", "application/json");
+  headers.append("x-goog-api-client", getClientHeaders(url.requestOptions));
+  headers.append("x-goog-api-key", url.apiKey);
+
+  let customHeaders = url.requestOptions?.customHeaders;
+  if (customHeaders) {
+    if (!(customHeaders instanceof Headers)) {
+      try {
+        customHeaders = new Headers(customHeaders);
+      } catch (e) {
+        throw new GoogleGenerativeAIRequestInputError(
+          `unable to convert customHeaders value ${JSON.stringify(
+            customHeaders,
+          )} to Headers: ${e.message}`,
+        );
+      }
+    }
+
+    for (const [headerName, headerValue] of customHeaders.entries()) {
+      if (headerName === "x-goog-api-key") {
+        throw new GoogleGenerativeAIRequestInputError(
+          `Cannot set reserved header name ${headerName}`,
+        );
+      } else if (headerName === "x-goog-api-client") {
+        throw new GoogleGenerativeAIRequestInputError(
+          `Header name ${headerName} can only be set using the apiClient field`,
+        );
+      }
+
+      headers.append(headerName, headerValue);
+    }
+  }
+
+  return headers;
+}
+
+export async function constructModelRequest(
+  model: string,
+  task: Task,
+  apiKey: string,
+  stream: boolean,
+  body: string,
+  requestOptions: SingleRequestOptions,
+): Promise<{ url: string; fetchOptions: RequestInit }> {
+  const url = new RequestUrl(model, task, apiKey, stream, requestOptions);
+  return {
+    url: url.toString(),
+    fetchOptions: {
+      ...buildFetchOptions(requestOptions),
+      method: "POST",
+      headers: await getHeaders(url),
+      body,
+    },
+  };
+}
+
+export async function makeModelRequest(
+  model: string,
+  task: Task,
+  apiKey: string,
+  stream: boolean,
+  body: string,
+  requestOptions: SingleRequestOptions = {},
+  // Allows this to be stubbed for tests
+  fetchFn = fetch,
+): Promise<Response> {
+  const { url, fetchOptions } = await constructModelRequest(
+    model,
+    task,
+    apiKey,
+    stream,
+    body,
+    requestOptions,
+  );
+  return makeRequest(url, fetchOptions, fetchFn);
 }
 
 export async function makeRequest(
-  url: RequestUrl,
-  body: string,
-  requestOptions?: RequestOptions,
+  url: string,
+  fetchOptions: RequestInit,
+  fetchFn = fetch,
 ): Promise<Response> {
   let response;
   try {
-    response = await fetch(url.toString(), {
-      ...buildFetchOptions(requestOptions),
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-client": getClientHeaders(),
-        "x-goog-api-key": url.apiKey,
-      },
-      body,
-    });
-    if (!response.ok) {
-      let message = "";
-      try {
-        const json = await response.json();
-        message = json.error.message;
-        if (json.error.details) {
-          message += ` ${JSON.stringify(json.error.details)}`;
-        }
-      } catch (e) {
-        // ignored
-      }
-      throw new Error(`[${response.status} ${response.statusText}] ${message}`);
-    }
+    response = await fetchFn(url, fetchOptions);
   } catch (e) {
-    const err = new GoogleGenerativeAIError(
+    handleResponseError(e, url);
+  }
+
+  if (!response.ok) {
+    await handleResponseNotOk(response, url);
+  }
+
+  return response;
+}
+
+function handleResponseError(e: Error, url: string): void {
+  let err = e;
+  if (
+    !(
+      e instanceof GoogleGenerativeAIFetchError ||
+      e instanceof GoogleGenerativeAIRequestInputError
+    )
+  ) {
+    err = new GoogleGenerativeAIError(
       `Error fetching from ${url.toString()}: ${e.message}`,
     );
     err.stack = e.stack;
-    throw err;
   }
-  return response;
+  throw err;
+}
+
+async function handleResponseNotOk(
+  response: Response,
+  url: string,
+): Promise<void> {
+  let message = "";
+  let errorDetails;
+  try {
+    const json = await response.json();
+    message = json.error.message;
+    if (json.error.details) {
+      message += ` ${JSON.stringify(json.error.details)}`;
+      errorDetails = json.error.details;
+    }
+  } catch (e) {
+    // ignored
+  }
+  throw new GoogleGenerativeAIFetchError(
+    `Error fetching from ${url.toString()}: [${response.status} ${
+      response.statusText
+    }] ${message}`,
+    response.status,
+    response.statusText,
+    errorDetails,
+  );
 }
 
 /**
@@ -108,13 +217,19 @@ export async function makeRequest(
  * @param requestOptions - The user-defined request options.
  * @returns The generated request options.
  */
-function buildFetchOptions(requestOptions?: RequestOptions): RequestInit {
+function buildFetchOptions(requestOptions?: SingleRequestOptions): RequestInit {
   const fetchOptions = {} as RequestInit;
-  if (requestOptions?.timeout >= 0) {
-    const abortController = new AbortController();
-    const signal = abortController.signal;
-    setTimeout(() => abortController.abort(), requestOptions.timeout);
-    fetchOptions.signal = signal;
+  if (requestOptions?.signal !== undefined || requestOptions?.timeout >= 0) {
+    const controller = new AbortController();
+    if (requestOptions?.timeout >= 0) {
+      setTimeout(() => controller.abort(), requestOptions.timeout);
+    }
+    if (requestOptions?.signal) {
+      requestOptions.signal.addEventListener("abort", () => {
+        controller.abort();
+      });
+    }
+    fetchOptions.signal = controller.signal;
   }
   return fetchOptions;
 }

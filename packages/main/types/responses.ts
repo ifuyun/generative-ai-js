@@ -53,11 +53,22 @@ export interface GenerateContentStreamResult {
 export interface EnhancedGenerateContentResponse
   extends GenerateContentResponse {
   /**
-   * Returns the text string from the response, if available.
+   * Returns the text string assembled from all `Part`s of the first candidate
+   * of the response, if available.
    * Throws if the prompt or candidate was blocked.
    */
   text: () => string;
+  /**
+   * Deprecated: use `functionCalls()` instead.
+   * @deprecated - use `functionCalls()` instead
+   */
   functionCall: () => FunctionCall | undefined;
+  /**
+   * Returns function calls found in any `Part`s of the first candidate
+   * of the response, if available.
+   * Throws if the prompt or candidate was blocked.
+   */
+  functionCalls: () => FunctionCall[] | undefined;
 }
 
 /**
@@ -68,8 +79,27 @@ export interface EnhancedGenerateContentResponse
  * @public
  */
 export interface GenerateContentResponse {
+  /** Candidate responses from the model. */
   candidates?: GenerateContentCandidate[];
+  /** The prompt's feedback related to the content filters. */
   promptFeedback?: PromptFeedback;
+  /** Metadata on the generation request's token usage. */
+  usageMetadata?: UsageMetadata;
+}
+
+/**
+ * Metadata on the generation request's token usage.
+ * @public
+ */
+export interface UsageMetadata {
+  /** Number of tokens in the prompt. */
+  promptTokenCount: number;
+  /** Total number of tokens across the generated candidates. */
+  candidatesTokenCount: number;
+  /** Total token count for the generation request (prompt + candidates). */
+  totalTokenCount: number;
+  /** Total token count in the cached part of the prompt, i.e. in the cached content. */
+  cachedContentTokenCount?: number;
 }
 
 /**
@@ -154,4 +184,16 @@ export interface BatchEmbedContentsResponse {
  */
 export interface ContentEmbedding {
   values: number[];
+}
+
+/**
+ * Details object that may be included in an error response.
+ * @public
+ */
+export interface ErrorDetails {
+  "@type"?: string;
+  reason?: string;
+  domain?: string;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
 }

@@ -17,11 +17,37 @@
 
 import {
   Content,
+  CountTokensRequest,
   EmbedContentRequest,
   GenerateContentRequest,
+  ModelParams,
   Part,
+  _CountTokensRequestInternal,
+  _GenerateContentRequestInternal,
 } from "../../types";
-import { GoogleGenerativeAIError } from "../errors";
+import {
+  GoogleGenerativeAIError,
+  GoogleGenerativeAIRequestInputError,
+} from "../errors";
+
+export function formatSystemInstruction(
+  input?: string | Part | Content,
+): Content | undefined {
+  // null or undefined
+  if (input == null) {
+    return undefined;
+  } else if (typeof input === "string") {
+    return { role: "system", parts: [{ text: input }] } as Content;
+  } else if ((input as Part).text) {
+    return { role: "system", parts: [input as Part] };
+  } else if ((input as Content).parts) {
+    if (!(input as Content).role) {
+      return { role: "system", parts: (input as Content).parts };
+    } else {
+      return input as Content;
+    }
+  }
+}
 
 export function formatNewContent(
   request: string | Array<string | Part>,
@@ -85,15 +111,61 @@ function assignRoleToPartsAndValidateSendMessageRequest(
   return functionContent;
 }
 
+export function formatCountTokensInput(
+  params: CountTokensRequest | string | Array<string | Part>,
+  modelParams?: ModelParams,
+): _CountTokensRequestInternal {
+  let formattedGenerateContentRequest: _GenerateContentRequestInternal = {
+    model: modelParams?.model,
+    generationConfig: modelParams?.generationConfig,
+    safetySettings: modelParams?.safetySettings,
+    tools: modelParams?.tools,
+    toolConfig: modelParams?.toolConfig,
+    systemInstruction: modelParams?.systemInstruction,
+    cachedContent: modelParams?.cachedContent?.name,
+    contents: [],
+  };
+  const containsGenerateContentRequest =
+    (params as CountTokensRequest).generateContentRequest != null;
+  if ((params as CountTokensRequest).contents) {
+    if (containsGenerateContentRequest) {
+      throw new GoogleGenerativeAIRequestInputError(
+        "CountTokensRequest must have one of contents or generateContentRequest, not both.",
+      );
+    }
+    formattedGenerateContentRequest.contents = (
+      params as CountTokensRequest
+    ).contents;
+  } else if (containsGenerateContentRequest) {
+    formattedGenerateContentRequest = {
+      ...formattedGenerateContentRequest,
+      ...(params as CountTokensRequest).generateContentRequest,
+    };
+  } else {
+    // Array or string
+    const content = formatNewContent(params as string | Array<string | Part>);
+    formattedGenerateContentRequest.contents = [content];
+  }
+  return { generateContentRequest: formattedGenerateContentRequest };
+}
+
 export function formatGenerateContentInput(
   params: GenerateContentRequest | string | Array<string | Part>,
 ): GenerateContentRequest {
+  let formattedRequest: GenerateContentRequest;
   if ((params as GenerateContentRequest).contents) {
-    return params as GenerateContentRequest;
+    formattedRequest = params as GenerateContentRequest;
   } else {
+    // Array or string
     const content = formatNewContent(params as string | Array<string | Part>);
-    return { contents: [content] };
+    formattedRequest = { contents: [content] };
   }
+  if ((params as GenerateContentRequest).systemInstruction) {
+    formattedRequest.systemInstruction = formatSystemInstruction(
+      (params as GenerateContentRequest).systemInstruction,
+    );
+  }
+  return formattedRequest;
 }
 
 export function formatEmbedContentInput(

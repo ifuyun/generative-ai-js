@@ -18,27 +18,23 @@
 import {
   CountTokensRequest,
   CountTokensResponse,
-  RequestOptions,
+  SingleRequestOptions,
 } from "../../types";
-import { RequestUrl, Task, makeRequest } from "../requests/request";
+import { Task, makeModelRequest } from "../requests/request";
 
 export async function countTokens(
   apiKey: string,
   model: string,
   params: CountTokensRequest,
-  requestOptions: RequestOptions,
+  singleRequestOptions: SingleRequestOptions,
 ): Promise<CountTokensResponse> {
-  const url = new RequestUrl(
+  const response = await makeModelRequest(
     model,
     Task.COUNT_TOKENS,
     apiKey,
     false,
-    requestOptions,
-  );
-  const response = await makeRequest(
-    url,
-    JSON.stringify({ ...params, model }),
-    requestOptions,
+    JSON.stringify(params),
+    singleRequestOptions,
   );
   return response.json();
 }

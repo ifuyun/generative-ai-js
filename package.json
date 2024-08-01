@@ -31,6 +31,7 @@
     "@web/test-runner": "^0.18.0",
     "chai": "^4.3.10",
     "chai-as-promised": "^7.1.1",
+    "chai-deep-equal-ignore-undefined": "^1.1.1",
     "eslint": "^8.52.0",
     "eslint-plugin-import": "^2.29.0",
     "eslint-plugin-unused-imports": "^3.0.0",
@@ -51,5 +52,6 @@
   "workspaces": [
     "packages/*"
   ],
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
 }

@@ -22,8 +22,10 @@ import * as sinonChai from "sinon-chai";
 import {
   BlockReason,
   Content,
+  ExecutableCodeLanguage,
   FinishReason,
   GenerateContentResponse,
+  Outcome,
 } from "../../types";
 
 use(sinonChai);
@@ -39,20 +41,110 @@ const fakeResponseText: GenerateContentResponse = {
     },
   ],
 };
+
+const functionCallPart1 = {
+  functionCall: {
+    name: "find_theaters",
+    args: {
+      location: "Mountain View, CA",
+      movie: "Barbie",
+    },
+  },
+};
+
+const functionCallPart2 = {
+  functionCall: {
+    name: "find_times",
+    args: {
+      location: "Mountain View, CA",
+      movie: "Barbie",
+      time: "20:00",
+    },
+  },
+};
+
 const fakeResponseFunctionCall: GenerateContentResponse = {
   candidates: [
     {
       index: 0,
       content: {
         role: "model",
+        parts: [functionCallPart1],
+      },
+    },
+  ],
+};
+
+const fakeResponseFunctionCalls: GenerateContentResponse = {
+  candidates: [
+    {
+      index: 0,
+      content: {
+        role: "model",
+        parts: [functionCallPart1, functionCallPart2],
+      },
+    },
+  ],
+};
+
+const fakeResponseMixed1: GenerateContentResponse = {
+  candidates: [
+    {
+      index: 0,
+      content: {
+        role: "model",
+        parts: [{ text: "some text" }, functionCallPart2],
+      },
+    },
+  ],
+};
+
+const fakeResponseMixed2: GenerateContentResponse = {
+  candidates: [
+    {
+      index: 0,
+      content: {
+        role: "model",
+        parts: [functionCallPart1, { text: "some text" }],
+      },
+    },
+  ],
+};
+
+const fakeResponseMixed3: GenerateContentResponse = {
+  candidates: [
+    {
+      index: 0,
+      content: {
+        role: "model",
         parts: [
+          { text: "some text" },
+          functionCallPart1,
+          { text: " and more text" },
+        ],
+      },
+    },
+  ],
+};
+
+const fakeResponseCodeExecution: GenerateContentResponse = {
+  candidates: [
+    {
+      index: 0,
+      content: {
+        role: "model",
+        parts: [
+          { text: "here's how to print hello world" },
           {
-            functionCall: {
-              name: "find_theaters",
-              args: {
-                location: "Mountain View, CA",
-                movie: "Barbie",
-              },
+            executableCode: {
+              language: ExecutableCodeLanguage.PYTHON,
+              code: 'print("hello world")',
+            },
+          },
+          {
+            codeExecutionResult: {
+              outcome: Outcome.OUTCOME_OK,
+              output: "hello world",
             },
           },
         ],
@@ -76,12 +168,51 @@ describe("response-helpers methods", () => {
     it("good response text", async () => {
       const enhancedResponse = addHelpers(fakeResponseText);
       expect(enhancedResponse.text()).to.equal("Some text and some more text");
+      expect(enhancedResponse.functionCalls()).to.be.undefined;
     });
     it("good response functionCall", async () => {
       const enhancedResponse = addHelpers(fakeResponseFunctionCall);
-      expect(enhancedResponse.functionCall()).to.deep.equal(
-        fakeResponseFunctionCall.candidates[0].content.parts[0].functionCall,
+      expect(enhancedResponse.text()).to.equal("");
+      expect(enhancedResponse.functionCalls()).to.deep.equal([
+        functionCallPart1.functionCall,
+      ]);
+    });
+    it("good response functionCalls", async () => {
+      const enhancedResponse = addHelpers(fakeResponseFunctionCalls);
+      expect(enhancedResponse.text()).to.equal("");
+      expect(enhancedResponse.functionCalls()).to.deep.equal([
+        functionCallPart1.functionCall,
+        functionCallPart2.functionCall,
+      ]);
+    });
+    it("good response text/functionCall", async () => {
+      const enhancedResponse = addHelpers(fakeResponseMixed1);
+      expect(enhancedResponse.functionCalls()).to.deep.equal([
+        functionCallPart2.functionCall,
+      ]);
+      expect(enhancedResponse.text()).to.equal("some text");
+    });
+    it("good response functionCall/text", async () => {
+      const enhancedResponse = addHelpers(fakeResponseMixed2);
+      expect(enhancedResponse.functionCalls()).to.deep.equal([
+        functionCallPart1.functionCall,
+      ]);
+      expect(enhancedResponse.text()).to.equal("some text");
+    });
+    it("good response text/functionCall/text", async () => {
+      const enhancedResponse = addHelpers(fakeResponseMixed3);
+      expect(enhancedResponse.functionCalls()).to.deep.equal([
+        functionCallPart1.functionCall,
+      ]);
+      expect(enhancedResponse.text()).to.equal("some text and more text");
+    });
+    it("good response code execution", async () => {
+      const enhancedResponse = addHelpers(fakeResponseCodeExecution);
+      console.log(enhancedResponse.text());
+      expect(enhancedResponse.text()).to.equal(
+        'here\'s how to print hello world\n```python\nprint("hello world")\n```\n\n```\nhello world\n```\n',
       );
+      expect(enhancedResponse.functionCalls()).to.be.undefined;
     });
     it("bad response safety", async () => {
       const enhancedResponse = addHelpers(badFakeResponse);

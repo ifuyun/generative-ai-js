@@ -21,12 +21,9 @@ import typescript from "typescript";
 import json from "@rollup/plugin-json";
 import pkg from "./package.json" assert { type: "json" };
 
-const deps = Object.keys(
-  Object.assign({}, pkg.peerDependencies, pkg.dependencies),
-);
-
 const es2017BuildPlugins = [
   typescriptPlugin({
+    clean: true,
     typescript,
     tsconfigOverride: {
       compilerOptions: {
@@ -51,8 +48,7 @@ const esmBuilds = [
       format: "es",
       sourcemap: true,
     },
-    external: (id) =>
-      deps.some((dep) => id === dep || id.startsWith(`${dep}/`)),
+    external: ["fs"],
     plugins: [...es2017BuildPlugins],
   },
 ];
@@ -61,11 +57,29 @@ const cjsBuilds = [
   {
     input: "src/index.ts",
     output: [{ file: pkg.main, format: "cjs", sourcemap: true }],
-    external: (id) =>
-      deps.some((dep) => id === dep || id.startsWith(`${dep}/`)),
+    external: ["fs"],
+    plugins: [...es2017BuildPlugins],
+  },
+];
+
+const serverBuilds = [
+  {
+    input: "src/server/index.ts",
+    output: [
+      { file: pkg.exports["./server"].import, format: "es", sourcemap: true },
+    ],
+    external: ["fs"],
+    plugins: [...es2017BuildPlugins],
+  },
+  {
+    input: "src/server/index.ts",
+    output: [
+      { file: pkg.exports["./server"].require, format: "cjs", sourcemap: true },
+    ],
+    external: ["fs"],
     plugins: [...es2017BuildPlugins],
   },
 ];
 
 // eslint-disable-next-line import/no-default-export
-export default [...esmBuilds, ...cjsBuilds];
+export default [...esmBuilds, ...cjsBuilds, ...serverBuilds];

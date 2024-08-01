@@ -15,12 +15,23 @@
  * limitations under the License.
  */
 
+import { ErrorDetails } from "../types";
+
+/**
+ * Basic error type for this SDK.
+ * @public
+ */
 export class GoogleGenerativeAIError extends Error {
   constructor(message: string) {
     super(`[GoogleGenerativeAI Error]: ${message}`);
   }
 }
 
+/**
+ * Errors in the contents of a response from the model. This includes parsing
+ * errors, or responses including a safety block reason.
+ * @public
+ */
 export class GoogleGenerativeAIResponseError<
   T,
 > extends GoogleGenerativeAIError {
@@ -31,3 +42,25 @@ export class GoogleGenerativeAIResponseError<
     super(message);
   }
 }
+
+/**
+ * Error class covering HTTP errors when calling the server. Includes HTTP
+ * status, statusText, and optional details, if provided in the server response.
+ * @public
+ */
+export class GoogleGenerativeAIFetchError extends GoogleGenerativeAIError {
+  constructor(
+    message: string,
+    public status?: number,
+    public statusText?: string,
+    public errorDetails?: ErrorDetails[],
+  ) {
+    super(message);
+  }
+}
+
+/**
+ * Errors in the contents of a request originating from user input.
+ * @public
+ */
+export class GoogleGenerativeAIRequestInputError extends GoogleGenerativeAIError {}
