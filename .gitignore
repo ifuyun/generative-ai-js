@@ -1,7 +1,8 @@
 node_modules
-packages/**/dist/
-packages/**/temp/
+dist/
+temp/
 *.tgz
 .DS_Store
 testfiles
+nodejs-vertexai/
 .idea

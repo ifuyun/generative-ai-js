@@ -42,6 +42,7 @@ jobs:
       run: yarn test
 
   node-integration-test:
+    if: github.secret_source == 'Actions'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -60,9 +61,10 @@ jobs:
     - name: run node iTests
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      run: yarn --cwd packages/main test:node:integration
+      run: yarn test:node:integration
 
   web-integration-test:
+    if: github.secret_source == 'Actions'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -81,4 +83,31 @@ jobs:
     - name: run web iTests
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      run: yarn --cwd packages/main test:web:integration
+      run: yarn test:web:integration
+
+  interface-alignment-test:
+    name: Interface Alignment Test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 20
+        cache: 'yarn'
+
+    - name: Get VertexAI repo
+      # Need to npm install inner repo first or there will be errors
+      run: |
+        git clone https://github.com/googleapis/nodejs-vertexai.git
+        cd nodejs-vertexai
+        npm install
+        cd ..
+        yarn
+
+    - name: Run tests
+      env:
+        TEST_REPO: "generative-ai-js"
+      run: |
+        npx ts-node nodejs-vertexai/sdk_schema_test/vertex_ai/*test.ts
+        npx ts-node nodejs-vertexai/sdk_schema_test/google_ai/*test.ts
