@@ -81,12 +81,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fuyun/generative-ai-js.git"
+    "url": "git+https://github.com/ifuyun/generative-ai-js.git"
   },
   "author": "",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/fuyun/generative-ai-js/issues"
+    "url": "https://github.com/ifuyun/generative-ai-js/issues"
   },
-  "homepage": "https://github.com/fuyun/generative-ai-js#readme"
+  "homepage": "https://github.com/ifuyun/generative-ai-js#readme",
+  "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
 }
