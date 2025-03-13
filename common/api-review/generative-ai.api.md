@@ -220,6 +220,17 @@ export interface EnhancedGenerateContentResponse extends GenerateContentResponse
     text: () => string;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "EnumStringSchema" is marked as @public, but its signature references "BaseSchema" which is marked as @internal
+//
+// @public
+export interface EnumStringSchema extends BaseSchema {
+    enum: string[];
+    // (undocumented)
+    format: "enum";
+    // (undocumented)
+    type: typeof SchemaType.STRING;
+}
+
 // @public
 export interface ErrorDetails {
     // (undocumented)
@@ -540,6 +551,10 @@ export class GoogleGenerativeAI {
 }
 
 // @public
+export class GoogleGenerativeAIAbortError extends GoogleGenerativeAIError {
+}
+
+// @public
 export class GoogleGenerativeAIError extends Error {
     constructor(message: string);
 }
@@ -589,8 +604,8 @@ export interface GroundingChunkWeb {
 
 // @public
 export interface GroundingMetadata {
-    groundingChuncks?: GroundingChunk[];
-    groundingSupport?: GroundingSupport[];
+    groundingChunks?: GroundingChunk[];
+    groundingSupports?: GroundingSupport[];
     retrievalMetadata?: RetrievalMetadata;
     searchEntryPoint?: SearchEntryPoint;
     webSearchQueries: string[];
@@ -613,20 +628,17 @@ export interface GroundingSupportSegment {
 
 // @public
 export enum HarmBlockThreshold {
-    // (undocumented)
     BLOCK_LOW_AND_ABOVE = "BLOCK_LOW_AND_ABOVE",
-    // (undocumented)
     BLOCK_MEDIUM_AND_ABOVE = "BLOCK_MEDIUM_AND_ABOVE",
-    // (undocumented)
     BLOCK_NONE = "BLOCK_NONE",
-    // (undocumented)
     BLOCK_ONLY_HIGH = "BLOCK_ONLY_HIGH",
-    // (undocumented)
     HARM_BLOCK_THRESHOLD_UNSPECIFIED = "HARM_BLOCK_THRESHOLD_UNSPECIFIED"
 }
 
 // @public
 export enum HarmCategory {
+    // (undocumented)
+    HARM_CATEGORY_CIVIC_INTEGRITY = "HARM_CATEGORY_CIVIC_INTEGRITY",
     // (undocumented)
     HARM_CATEGORY_DANGEROUS_CONTENT = "HARM_CATEGORY_DANGEROUS_CONTENT",
     // (undocumented)
@@ -641,15 +653,10 @@ export enum HarmCategory {
 
 // @public
 export enum HarmProbability {
-    // (undocumented)
     HARM_PROBABILITY_UNSPECIFIED = "HARM_PROBABILITY_UNSPECIFIED",
-    // (undocumented)
     HIGH = "HIGH",
-    // (undocumented)
     LOW = "LOW",
-    // (undocumented)
     MEDIUM = "MEDIUM",
-    // (undocumented)
     NEGLIGIBLE = "NEGLIGIBLE"
 }
 
@@ -806,6 +813,18 @@ export interface SearchEntryPoint {
     sdkBlob?: string;
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "SimpleStringSchema" is marked as @public, but its signature references "BaseSchema" which is marked as @internal
+//
+// @public
+export interface SimpleStringSchema extends BaseSchema {
+    // (undocumented)
+    enum?: never;
+    // (undocumented)
+    format?: "date-time" | undefined;
+    // (undocumented)
+    type: typeof SchemaType.STRING;
+}
+
 // @public
 export interface SingleRequestOptions extends RequestOptions {
     signal?: AbortSignal;
@@ -824,14 +843,8 @@ export interface StartChatParams extends BaseParams {
     tools?: Tool[];
 }
 
-// Warning: (ae-incompatible-release-tags) The symbol "StringSchema" is marked as @public, but its signature references "BaseSchema" which is marked as @internal
-//
 // @public
-export interface StringSchema extends BaseSchema {
-    enum?: string[];
-    // (undocumented)
-    type: typeof SchemaType.STRING;
-}
+export type StringSchema = SimpleStringSchema | EnumStringSchema;
 
 // @public
 export enum TaskType {

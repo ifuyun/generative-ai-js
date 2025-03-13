@@ -4,6 +4,8 @@
 
 ```ts
 
+/// <reference types="node" />
+
 // Warning: (ae-incompatible-release-tags) The symbol "ArraySchema" is marked as @public, but its signature references "BaseSchema" which is marked as @internal
 //
 // @public
@@ -127,6 +129,17 @@ export interface Content {
     parts: Part[];
     // (undocumented)
     role: string;
+}
+
+// Warning: (ae-incompatible-release-tags) The symbol "EnumStringSchema" is marked as @public, but its signature references "BaseSchema" which is marked as @internal
+//
+// @public
+export interface EnumStringSchema extends BaseSchema {
+    enum: string[];
+    // (undocumented)
+    format: "enum";
+    // (undocumented)
+    type: typeof SchemaType.STRING;
 }
 
 // @public
@@ -373,7 +386,7 @@ export class GoogleAIFileManager {
     deleteFile(fileId: string): Promise<void>;
     getFile(fileId: string, requestOptions?: SingleRequestOptions): Promise<FileMetadataResponse>;
     listFiles(listParams?: ListParams, requestOptions?: SingleRequestOptions): Promise<ListFilesResponse>;
-    uploadFile(filePath: string, fileMetadata: FileMetadata): Promise<UploadFileResponse>;
+    uploadFile(fileData: string | Buffer, fileMetadata: FileMetadata): Promise<UploadFileResponse>;
 }
 
 // @public
@@ -493,19 +506,25 @@ export enum SchemaType {
     STRING = "string"
 }
 
+// Warning: (ae-incompatible-release-tags) The symbol "SimpleStringSchema" is marked as @public, but its signature references "BaseSchema" which is marked as @internal
+//
+// @public
+export interface SimpleStringSchema extends BaseSchema {
+    // (undocumented)
+    enum?: never;
+    // (undocumented)
+    format?: "date-time" | undefined;
+    // (undocumented)
+    type: typeof SchemaType.STRING;
+}
+
 // @public
 export interface SingleRequestOptions extends RequestOptions {
     signal?: AbortSignal;
 }
 
-// Warning: (ae-incompatible-release-tags) The symbol "StringSchema" is marked as @public, but its signature references "BaseSchema" which is marked as @internal
-//
 // @public
-export interface StringSchema extends BaseSchema {
-    enum?: string[];
-    // (undocumented)
-    type: typeof SchemaType.STRING;
-}
+export type StringSchema = SimpleStringSchema | EnumStringSchema;
 
 // @public
 export interface TextPart {
